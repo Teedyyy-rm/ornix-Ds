@@ -1,0 +1,101 @@
+[project]
+name = "ornix-ds"
+version = "0.0.0"
+description = "Data admission and evidence layer for Ornix-TTS: acquisition, validation, qualification, provenance and release."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "TBD" }
+authors = [{ name = "Ornix contributors" }]
+
+# The compatibility contract is a NON-OPTIONAL dependency (ARCHITECTURE.md 25,
+# ADR 0008 8.5). The factory builds every record through the real
+# ornix.data.ManifestRecord; a local fallback schema is prohibited and the
+# release build must fail when this package is absent.
+dependencies = [
+  "ornix-tts",
+  "pydantic>=2",
+  "PyYAML>=6.0",
+  "numpy>=1.24",
+]
+
+[project.optional-dependencies]
+# Pinned identically to ornix-tts (pyproject.toml:25-28). torchcodec is the
+# canonical decode path (ARCHITECTURE.md 5).
+audio = [
+  "torch==2.11.0",
+  "torchcodec==0.16.0",
+  "scipy>=1.11",
+]
+acquisition = ["huggingface_hub>=0.30"]
+# Resampling is NOT an extra: it is ornix.audio's responsibility (ADR 0002).
+detectors = [
+  "onnxruntime>=1.20",
+  "faster-whisper>=1.1",
+  "jiwer>=3.0",
+]
+speaker = ["pyannote.audio>=4.0"]
+analytics = ["pyarrow>=16", "polars>=1.0", "duckdb>=1.0"]
+publishing = ["huggingface_hub>=0.30"]
+development = [
+  "pytest>=8.0",
+  "pytest-cov>=5.0",
+  "ruff>=0.6",
+  "mypy>=1.11",
+  "typer>=0.12",
+  "rich>=13.7",
+]
+
+[project.scripts]
+ornix-data = "ornix_data.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "N", "UP", "B", "SIM", "ANN", "ASYNC", "RUF", "D"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["ANN", "D"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unreachable = true
+disallow_any_generics = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+mypy_path = "src"
+packages = ["ornix_data"]
+
+[[tool.mypy.overrides]]
+module = ["torchcodec.*", "onnxruntime.*", "faster_whisper.*", "pyannote.*", "soundfile.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra --strict-markers --strict-config"
+markers = [
+  "integration: exercises real codecs, files, SQLite or local HTTP",
+  "compatibility: exercises the real ornix.data contract and upstream test suites",
+  "acceptance: full pipeline end to end, crash injection, remote verification",
+  "network: requires network access",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+source = ["src/ornix_data"]
+branch = true
