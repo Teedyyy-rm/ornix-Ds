@@ -61,3 +61,7 @@ configs/*.local.yaml
 .idea/
 .vscode/
 .DS_Store
+
+# Bootstrap scratch. The ornix-tts wheel is built here from a copy of the
+# read-only downstream checkout (docs/OPERATIONS.md 1a). Never committed.
+bootstrap/

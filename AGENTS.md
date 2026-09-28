@@ -16,6 +16,44 @@ Before implementing anything:
 7. `docs/TESTING.md` — the tests your change must satisfy
 8. `MEMORY.md` — the current execution state and the next unblocked action
 
+## Repository boundary — absolute
+
+**Working directory: `/home/obito/projects/ornix-Ds/`. This is where all work happens.**
+
+```text
+/home/obito/projects/ornix-Ds      ← THIS repository. All writes.
+    origin  https://github.com/Teedyyy-rm/ornix-Ds.git
+
+/home/obito/projects/Ornix-TTS     ← DOWNSTREAM. READ-ONLY. NEVER WRITE.
+```
+
+`ornix-Ds` is a **separate project, split out of `Ornix-TTS`**. It is not a subdirectory, a
+submodule, a workspace member, or a branch of it.
+
+**Prohibited without exception:**
+
+- Writing, creating, editing, deleting or moving any file under `/home/obito/projects/Ornix-TTS`.
+- Running any tool that writes there — including `pytest`, `mypy --install-types`, `black`,
+  `ruff --fix`, `build`, `pip install -e`, or any `uv sync` against that checkout.
+- Using a **path or editable dependency** on that checkout. `editable = true` and setuptools
+  builds both write `*.egg-info` and bytecode into the source tree. Both are forbidden.
+- Adding `Ornix-TTS` to a uv workspace, or making either repo a member of the other.
+
+**Required when reading it:**
+
+- Run any Python against that checkout with `python -B` or `PYTHONDONTWRITEBYTECODE=1`, so no
+  `.pyc` is written into its tree.
+- Never `cd` into it to run anything.
+- Treat every read as a **snapshot**: its branch is under active development and its HEAD moves.
+  Cite a contract as *verified at `<sha>` on `<date>`*, never as permanent truth. Re-verify
+  before relying on it.
+
+**How the dependency is actually resolved** (see `docs/OPERATIONS.md` §1a): `ornix-tts` is
+declared as a normal dependency in `pyproject.toml` for portability and CI. For local
+bootstrap, the source is **copied to a scratch directory outside both repos**, built into a
+wheel there, and the wheel is installed into this repository's `.venv`. `Ornix-TTS` is read
+exactly once per build and never written.
+
 ## Non-negotiable rules
 
 - Do not create a second `ManifestRecord`. Every record is built through

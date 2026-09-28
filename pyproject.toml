@@ -58,6 +58,13 @@ package-dir = { "" = "src" }
 [tool.setuptools.packages.find]
 where = ["src"]
 
+# -e . installs only this package. Dependencies are installed separately: the
+# ornix-tts wheel is built from a scratch copy of the read-only downstream
+# checkout and installed by hand (docs/OPERATIONS.md 1a). `uv sync` would try to
+# resolve ornix-tts from an index, which fails locally because it is unpublished.
+# In CI it resolves from an index or an authenticated git source, never from a
+# sibling checkout.
+
 [tool.ruff]
 line-length = 100
 target-version = "py311"
@@ -83,6 +90,14 @@ packages = ["ornix_data"]
 [[tool.mypy.overrides]]
 module = ["torchcodec.*", "onnxruntime.*", "faster_whisper.*", "pyannote.*", "soundfile.*"]
 ignore_missing_imports = true
+
+# ornix-tts ships no py.typed marker. Its API is the normative contract this
+# repository binds to, so it is type-checked as Any rather than silenced
+# wholesale: annotate every import from it explicitly (see docs/OPERATIONS.md).
+[[tool.mypy.overrides]]
+module = ["ornix.*", "ornix_tts.*"]
+ignore_missing_imports = true
+follow_untyped_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

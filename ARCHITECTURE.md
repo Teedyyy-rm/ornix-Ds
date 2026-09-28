@@ -59,6 +59,53 @@ corrections are incorporated here. Full evidence in `docs/ANALYSIS.md`.
 
 ---
 
+## 0.3 Repository boundary — absolute
+
+**Working directory: `/home/obito/projects/ornix-Ds/`. All work happens here.**
+
+```text
+/home/obito/projects/ornix-Ds      ← THIS repository. All writes.
+    origin  https://github.com/Teedyyy-rm/ornix-Ds.git
+
+/home/obito/projects/Ornix-TTS     ← DOWNSTREAM. READ-ONLY. NEVER WRITE.
+```
+
+`ornix-Ds` is a **separate project, split out of `Ornix-TTS`**. It is not a subdirectory, a
+submodule, a workspace member, or a branch of it.
+
+**Never, under any circumstance:**
+
+- write, create, edit, delete or move any file under `/home/obito/projects/Ornix-TTS`;
+- run any tool that writes there — `pytest`, `mypy --install-types`, `ruff --fix`, `build`,
+  `pip install -e`, or any `uv sync` against that checkout;
+- use a **path or editable dependency** on that checkout. `editable = true` writes
+  `*.egg-info` into the source tree; a setuptools build writes `*.egg-info` and bytecode
+  there. Both are forbidden;
+- add `Ornix-TTS` to a uv workspace, or make either repo a member of the other.
+
+**When reading it:**
+
+- run any Python against that checkout with `python -B` or `PYTHONDONTWRITEBYTECODE=1`, so no
+  `.pyc` is written into its tree;
+- never `cd` into it to run anything;
+- treat every read as a **snapshot**. Its branch is under active development and its HEAD
+  moves — `cebd6d9` became `f9a3b1f` within one session. Cite a contract as
+  *verified at `<sha>` on `<date>`*, never as permanent truth, and re-verify before relying
+  on it.
+
+**How the dependency is resolved.** `ornix-tts` is declared as a **normal dependency** in
+`pyproject.toml`, for portability and so that CI resolves it from an index. For local
+bootstrap, the source is **copied to a scratch directory outside both repositories**, built
+into a wheel **there**, and that wheel is installed into this repository's `.venv`. The
+`Ornix-TTS` checkout is read exactly once per build and never written.
+Procedure: `docs/OPERATIONS.md` §1a.
+
+This is a deliberate design constraint, not an inconvenience. The two repositories have
+different lifecycles, different review gates and different rates of change. Coupling them at
+the filesystem level would let a change to one silently become a change to the other.
+
+---
+
 ## 1. Goal
 
 Build a deterministic data factory:

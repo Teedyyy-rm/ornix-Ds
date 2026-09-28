@@ -32,6 +32,64 @@ uv sync --extra publishing    # huggingface_hub
 
 ---
 
+## 1a. Resolving `ornix-tts` without writing to it
+
+`ornix-tts` is not on PyPI and `Ornix-TTS` is a **read-only, never-written** checkout
+(`ARCHITECTURE.md` §0.3). A path or editable dependency is prohibited because both write
+`*.egg-info` and bytecode into the source tree.
+
+### 1a.1 Local bootstrap — copy, build in scratch, install the wheel
+
+```bash
+# 1. Snapshot the checkout into scratch, OUTSIDE both repositories.
+#    Read-only on the source; nothing is written back.
+SCRATCH=/tmp/opencode/ornix-tts-build
+rm -rf "$SCRATCH" && mkdir -p "$SCRATCH"
+cp -a /home/obito/projects/Ornix-TTS/{src,pyproject.toml,README.md} "$SCRATCH"/
+REV=$(git -C /home/obito/projects/Ornix-TTS rev-parse HEAD)
+echo "snapshot of Ornix-TTS@$REV"
+
+# 2. Build the wheel IN the scratch copy. Never in the source tree.
+cd "$SCRATCH"
+python3 -m build --wheel --outdir "$SCRATCH/dist" .
+
+# 3. Install the wheel into THIS repository's environment.
+cd /home/obito/projects/ornix-Ds
+uv pip install "$SCRATCH"/dist/ornix_tts-*.whl
+```
+
+The build is deterministic given the same snapshot. **Record `$REV` in the release metadata**
+— it is the contract revision the release was verified against (`ARCHITECTURE.md` §26,
+`docs/ROADMAP.md` Phase O).
+
+### 1a.2 Reading the checkout without writing to it
+
+Any direct read must suppress bytecode:
+
+```bash
+PYTHONDONTWRITEBYTECODE=1 python3 -B -c "from ornix.data import ManifestRecord"
+```
+
+Never `cd` into `/home/obito/projects/Ornix-TTS` to run anything.
+
+### 1a.3 Verifying the boundary holds
+
+```bash
+git -C /home/obito/projects/Ornix-TTS status --porcelain    # must be empty
+```
+
+Run this after any operation that touches `ornix-tts`. An empty result is the only acceptable
+outcome. Note that `__pycache__` is usually gitignored, so a clean `git status` does **not**
+prove nothing was written — when in doubt check filesystem mtimes, not git.
+
+### 1a.4 CI
+
+CI resolves `ornix-tts` from an index or an authenticated git source, never from a sibling
+checkout. The compatibility suite pins the resolved revision so a contract change fails the
+build rather than passing silently (`docs/ROADMAP.md` Phase O, "Mitigation for O").
+
+---
+
 ## 2. Workspace layout
 
 ```text
